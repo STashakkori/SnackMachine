@@ -7,7 +7,7 @@ public interface Model {
 
     public void unregisterModel(Model m);
 
-    public void notifyModel();
+    public void notifyView();
 
 
 

@@ -17,9 +17,9 @@ public class SnackFactory {
                 return new Fritos();
             case "kitkats":
                 return new Kitkat();
-            case "lays":
+            case "laysclassic":
                 return new Lays();
-            case "layssaltvinegar":
+            case "laysvinegar":
                 return new LaysSaltVinegar();
             case "milkyway":
                 return new MilkyWay();
@@ -31,7 +31,7 @@ public class SnackFactory {
                 return new SunchipsBbq();
             case "twix":
                 return new Twix();
-            case "layscheddarcream":
+            case "layscheddar":
                 return new LaysCheddarCream();
             case "pretzels":
                 return new Pretzels();

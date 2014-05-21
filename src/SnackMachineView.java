@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.util.Date;
 import java.awt.Graphics;
@@ -16,7 +17,7 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 
 /**
- * SnackMachineView --- view for the snack machine simulation program.
+ * SnackMachineView --- View class for the snack machine simulation program.
  * @author st79375
  * @date on 4/17/2014
  */
@@ -269,6 +270,13 @@ public class SnackMachineView extends JFrame implements WindowListener {
         //// Controller Initialization ////
         SnackMachineController controller = new SnackMachineController();
 
+        /*
+        JLabel bg = new JLabel(new ImageIcon("bg.jpg"));
+        bg.setSize(500,500);
+        bg.setLayout(new FlowLayout());
+        this.add(bg);
+        */
+
         //// Panel Initialization ////
         mainPanel = new JPanel();                           // mainPanel --- panel that spans the whole frame
         choicePanel = new JPanel(new GridLayout(0,3));      // choicePanel --- panel that holds buttons, console, and money insert
@@ -342,6 +350,7 @@ public class SnackMachineView extends JFrame implements WindowListener {
         for(JButton button : optionButtons) button.addActionListener(controller);
 
         //// Piece Gui components together ////
+        this.add(mainPanel);
         moneyPanel.add(insertMoneyLabel1);
         moneyPanel.add(insertMoneyLabel2);
         pricePanel.add(priceLabelChips);
@@ -376,6 +385,7 @@ public class SnackMachineView extends JFrame implements WindowListener {
         mainPanel.add(rightPanel,BorderLayout.EAST);
         tempLoopIterator = 0;
 
+        /// Button styliing methods
         stylePlusMinusButton(plusButtonNickel);
         stylePlusMinusButton(minusButtonNickel);
         stylePlusMinusButton(plusButtonDime);
@@ -474,7 +484,6 @@ public class SnackMachineView extends JFrame implements WindowListener {
         // style the panel that holds money increments
         walletPanel.setBackground(Color.lightGray);
         mainPanel.add(walletPanel);
-        this.add(mainPanel);
     }
 
     /**
@@ -485,7 +494,7 @@ public class SnackMachineView extends JFrame implements WindowListener {
     private static String[] initSnackStrings(String[] sArray){
         sArray = new String[]{
             "doritosnacho", "doritosranch","cheetos", "fritos",
-            "combospizza", "lays", "layssaltvinegar", "layscheddarcream",
+            "combospizza", "laysclassic", "laysvinegar", "layscheddar",
             "pretzels","sweetsaltymix","sunchipssalsa", "sunchipsbbq",
             "reeses", "snickers", "milkyway", "twix",
         };
@@ -573,7 +582,7 @@ public class SnackMachineView extends JFrame implements WindowListener {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         double width = screenSize.getWidth();
         f.setPreferredSize(new Dimension((int)width, 950));
-        f.getContentPane().setBackground(Color.gray);
+        //f.getContentPane().setBackground(Color.gray);
     }
 
     /**
@@ -618,7 +627,7 @@ public class SnackMachineView extends JFrame implements WindowListener {
      * @param p
      */
     private static void styleMainPanel(JPanel p){
-        p.setBackground(Color.gray);
+        p.setBackground(new Color(184,226,247));
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         double width = screenSize.getWidth();
         p.setPreferredSize(new Dimension((int)width, 950));
@@ -957,7 +966,24 @@ public class SnackMachineView extends JFrame implements WindowListener {
 
     public class SnackMachineController implements ActionListener, Controller{
 
-        public void update(double test1, double test2, double test3){
+        SnackMachineModel model;
+
+        public SnackMachineController() {
+            try {
+                model = new SnackMachineModel();    // Create a snack machine model
+                model.migrateDB();                  // Map backend to Model objects
+                model.clearProducts();              // Clear out snack objects from previous session.
+                model.stockDB();                    // Restock the machine.
+                //model.removeSnack("twix");
+                model.countItems(initSnackStrings(snacks));
+            }
+            catch(UnknownHostException u){
+                System.out.println("Can't find host -- connection failed.");
+                model = null;
+            }
+        }
+
+        public void updateView(double test1, double test2, double test3){
 
         }
 

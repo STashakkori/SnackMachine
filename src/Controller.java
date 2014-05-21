@@ -3,6 +3,14 @@
  */
 public interface Controller {
 
-    public void update(double onePrice, double twoPrice, double threePrice);
+    // Model manipulation methods go here.
+
+    /**
+     *
+     * @param onePrice
+     * @param twoPrice
+     * @param threePrice
+     */
+    public void updateView(double onePrice, double twoPrice, double threePrice);
 
 }
