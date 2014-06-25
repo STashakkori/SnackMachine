@@ -6,12 +6,12 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.net.UnknownHostException;
 import java.text.DecimalFormat;
-import java.util.Date;
+import java.util.*;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -974,8 +974,18 @@ public class SnackMachineView extends JFrame implements WindowListener {
                 model.migrateDB();                  // Map backend to Model objects
                 model.clearProducts();              // Clear out snack objects from previous session.
                 model.stockDB();                    // Restock the machine.
-                //model.removeSnack("twix");
+                //model.removeItem("twix");
                 model.countItems(initSnackStrings(snacks));
+                model.addTransacton("fritos");
+                model.addTransacton("snickers");
+                ConcurrentLinkedQueue<String> receipt = new ConcurrentLinkedQueue<String>();
+                model.getTransactions(receipt);
+                System.out.println("Printing Receipt...");
+                for(String line: receipt){
+                    System.out.println(receipt.remove());
+                }
+                //model.getTotalSales();
+                model.getNumSales();
             }
             catch(UnknownHostException u){
                 System.out.println("Can't find host -- connection failed.");

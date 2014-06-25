@@ -1,18 +1,15 @@
 import java.net.UnknownHostException;
 import java.util.*;
 
-import com.mongodb.MongoClient;
-import com.mongodb.MongoException;
-import com.mongodb.WriteConcern;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
-import com.mongodb.DBCursor;
-import com.mongodb.ServerAddress;
+import com.mongodb.*;
+import com.sun.javafx.collections.MappingChange;
 import org.bson.types.ObjectId;
-
 import javax.swing.text.Document;
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by rt on 4/22/14.
@@ -37,7 +34,7 @@ public class SnackMachineModel implements Model {
         System.out.println(productTable.count() + " documents migrated");
     }
 
-    public void removeSnack(String name){
+    public void removeItem(String name){
         DB db = mongoClient.getDB("snackmachine");
         DBCollection productTable = db.getCollection("product");
         BasicDBObject searchQuery = new BasicDBObject();
@@ -413,27 +410,122 @@ public class SnackMachineModel implements Model {
         }
     }
 
+    /*
 
+     */
     public void addTransacton(String itemName){
-
+        DB db = mongoClient.getDB("snackmachine");
+        DBCollection salesTable = db.getCollection("sales");
+        DBCollection productTable = db.getCollection("product");
+        BasicDBObject searchQuery = new BasicDBObject();
+        searchQuery.put("name", itemName);
+        BasicDBObject purchaseDoc = new BasicDBObject(searchQuery);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date snapShot = new Date();
+        purchaseDoc.append("sold",dateFormat.format(snapShot));
+        purchaseDoc.append("paid", productTable.findOne(searchQuery).get("price"));
+        salesTable.insert(purchaseDoc);
     }
 
     /*
 
      */
-    public Queue<String> getTransactions(){
+    public ConcurrentLinkedQueue<String> getTransactions(ConcurrentLinkedQueue<String> receipt){
+        DB db = mongoClient.getDB("snackmachine");
+        DBCollection salesTable = db.getCollection("sales");
+        DBCursor cursor = salesTable.find();
+        while(cursor.hasNext()){
+            String item = cursor.next().toString();
+            receipt.add(item);
+        }
+        System.out.println("Receipt Generated....");
+        return receipt;
+    }
 
-        return null;
+    public void getTotalSales() {
+        DB db = mongoClient.getDB("snackmachine");
+        DBCollection salesTable = db.getCollection("sales");
+
+        String map = "function(){ " +
+                        "var snackname = 'total snacks'; " +
+                        "emit(snackname, {name:this.name}); " +
+                        "sort: {name: 1}" +
+                     "}";
+        String reduce = "function(key,values){ "+
+                            "var sum = 0; " +
+                            "values.forEach(function(doc){" +
+                            "sum += 1; " +
+                            "}); " +
+                            "return {salesTable:sum};" +
+                        "} ";
+
+        MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, null, MapReduceCommand.OutputType.INLINE, null);
+        MapReduceOutput out = salesTable.mapReduce(cmd);
+
+        for(DBObject o: out.results()){
+            System.out.println(o.toString());
+        }
+    }
+
+    public void getNumSales() {
+        DB db = mongoClient.getDB("snackmachine");
+        DBCollection salesTable = db.getCollection("sales");
+
+        String map = "function(){ " +
+                        "for(var i = 0; i < reg.length; i++){ " +
+                            "emit({{name:this.name}, {count:1}); " +
+                        "}" +
+                     "}";
+
+        String reduce = "function(key,counts){ "+
+                "var counter = 0; " +
+                "for (var i = 0; i < counts.length; i++) {" +
+                    "counter = counter + counts[i].count;" +
+                "}"+
+                "return { count:counter };";
+
+        MapReduceOutput out = salesTable.mapReduce(map, reduce, "counts", MapReduceCommand.OutputType.REPLACE, null);
+
+        //MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, null, MapReduceCommand.OutputType.REPLACE, null);
+        //MapReduceOutput out = salesTable.mapReduce(cmd);
+
+        for(DBObject o: out.results()){
+            System.out.println(o.toString());
+        }
     }
 
     /*
 
      */
-    public Queue<String> getBestSeller(){
-        return null;
+    public void getBestSeller() {
+        /*DB db = mongoClient.getDB("snackmachine");
+        DBCollection salesTable = db.getCollection("sales");
+
+        String map = "function(){ " +
+                        "var x = {itemName:this.name, _id:this.id};" +
+                        "emit(this.name,{x:min,x:max}" +
+                     "};";
+
+        String reduce = "function(key,values){ " +
+                "var res = values[0];" +
+                "for(var i=1; i<values.length; i++){" +
+                    "if(values[i].min.name < res.min.name" +
+                        "res.min = values[i].min;"+
+                    "if(values[i].max.name < res.max.name)" +
+                        "res.max"
+
+                return res;}"
+                "var sum = 0; " +
+                "values.forEach(function(doc){" +
+                "sum += 1; " +
+                "}); " +
+                "return {salesTable:sum};} ";
+                */
     }
 
+    /*
 
+     */
     public void clearProducts(){
         DB db = mongoClient.getDB("snackmachine");
         DBCollection productTable = db.getCollection("product");
@@ -441,7 +533,20 @@ public class SnackMachineModel implements Model {
         while(cursor.hasNext()){
             productTable.remove(cursor.next());
         }
-        System.out.println("All existing documents removed.");
+        System.out.println("All existing product documents removed.");
+    }
+
+    /*
+
+     */
+    public void clearSales(){
+        DB db = mongoClient.getDB("snackmachine");
+        DBCollection productTable = db.getCollection("sales");
+        DBCursor cursor = productTable.find();
+        while(cursor.hasNext()){
+            productTable.remove(cursor.next());
+        }
+        System.out.println("All existing sales documents removed.");
     }
 
     public void registerModel(Model m){
