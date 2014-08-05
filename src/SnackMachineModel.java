@@ -10,6 +10,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Created by rt on 4/22/14.
@@ -448,16 +450,16 @@ public class SnackMachineModel implements Model {
 
         String map = "function(){ " +
                         "var snackname = 'total snacks'; " +
-                        "emit(snackname, {name:this.name}); " +
-                        "sort: {name: 1}" +
+                        "emit({name:this.name}, {count:1}); " +
+                        "sort: {name: 1};" +
                      "}";
         String reduce = "function(key,values){ "+
                             "var sum = 0; " +
                             "values.forEach(function(doc){" +
-                            "sum += 1; " +
+                            "sum += doc['count'] " +
                             "}); " +
-                            "return {salesTable:sum};" +
-                        "} ";
+                            "return {sum:sum};" +
+                        "}";
 
         MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, null, MapReduceCommand.OutputType.INLINE, null);
         MapReduceOutput out = salesTable.mapReduce(cmd);
@@ -473,21 +475,18 @@ public class SnackMachineModel implements Model {
 
         String map = "function(){ " +
                         "for(var i = 0; i < reg.length; i++){ " +
-                            "emit({{name:this.name}, {count:1}); " +
+                            "emit({name:this.name}, {count:1}); " +
                         "}" +
                      "}";
 
         String reduce = "function(key,counts){ "+
-                "var counter = 0; " +
-                "for (var i = 0; i < counts.length; i++) {" +
-                    "counter = counter + counts[i].count;" +
-                "}"+
-                "return { count:counter };";
+                            "var counter = 0; " +
+                            "for (var i = 0; i < counts.length; i++) {" +
+                                "counter = counter + counts[i].count;" +
+                            "}"+
+                        "return { count:counter };";
 
         MapReduceOutput out = salesTable.mapReduce(map, reduce, "counts", MapReduceCommand.OutputType.REPLACE, null);
-
-        //MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, null, MapReduceCommand.OutputType.REPLACE, null);
-        //MapReduceOutput out = salesTable.mapReduce(cmd);
 
         for(DBObject o: out.results()){
             System.out.println(o.toString());
@@ -497,30 +496,74 @@ public class SnackMachineModel implements Model {
     /*
 
      */
-    public void getBestSeller() {
-        /*DB db = mongoClient.getDB("snackmachine");
+    public String getBestSeller() {
+
+        DB db = mongoClient.getDB("snackmachine");
         DBCollection salesTable = db.getCollection("sales");
 
-        String map = "function(){ " +
-                        "var x = {itemName:this.name, _id:this.id};" +
-                        "emit(this.name,{x:min,x:max}" +
-                     "};";
+        String map ="function(){ " +
+                        "var snackname = 'total snacks'; " +
+                        "emit({name:this.name}, {count:1}); " +
+                    "}";
 
-        String reduce = "function(key,values){ " +
-                "var res = values[0];" +
-                "for(var i=1; i<values.length; i++){" +
-                    "if(values[i].min.name < res.min.name" +
-                        "res.min = values[i].min;"+
-                    "if(values[i].max.name < res.max.name)" +
-                        "res.max"
+        String reduce = "function(key,values){ "+
+                            "var sum = 0; " +
+                            "values.forEach(function(doc){" +
+                                "sum += doc['count'] " +
+                            "}); " +
+                        "return {sum:sum};" +
+                        "}";
 
-                return res;}"
-                "var sum = 0; " +
-                "values.forEach(function(doc){" +
-                "sum += 1; " +
-                "}); " +
-                "return {salesTable:sum};} ";
-                */
+        DBCollection reduced = db.createCollection("salesReduction",null);
+        MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, "salesCounts", MapReduceCommand.OutputType.REPLACE, null);
+        MapReduceOutput out = salesTable.mapReduce(cmd);
+        DBCollection collection = db.getCollection("salesCounts");
+        DBObject sort = new BasicDBObject();
+        sort.put("value", -1);
+        DBCursor cursor = collection.find().sort(sort).limit(1);
+        Pattern p = Pattern.compile("[0-9]+");
+        String max = cursor.next().get("value").toString();
+        Matcher m = p.matcher(max);
+        if(m.find()) {
+            System.out.println("Best seller:" + m.group());
+            return m.group();
+        }
+        return "";
+    }
+
+    public String getWorstSeller() {
+
+            DB db = mongoClient.getDB("snackmachine");
+            DBCollection salesTable = db.getCollection("sales");
+
+            String map = "function(){ " +
+                    "var snackname = 'total snacks'; " +
+                    "emit({name:this.name}, {count:1}); " +
+                    "}";
+
+            String reduce = "function(key,values){ " +
+                    "var sum = 0; " +
+                    "values.forEach(function(doc){" +
+                    "sum += doc['count'] " +
+                    "}); " +
+                    "return {sum:sum};" +
+                    "}";
+
+            DBCollection reduced = db.createCollection("salesReduction", null);
+            MapReduceCommand cmd = new MapReduceCommand(salesTable, map, reduce, "salesCounts", MapReduceCommand.OutputType.REPLACE, null);
+            MapReduceOutput out = salesTable.mapReduce(cmd);
+            DBCollection collection = db.getCollection("salesCounts");
+            DBObject sort = new BasicDBObject();
+            sort.put("value", 1);
+            DBCursor cursor = collection.find().sort(sort).limit(1);
+            Pattern p = Pattern.compile("[0-9]+");
+            String max = cursor.next().get("value").toString();
+            Matcher m = p.matcher(max);
+            if(m.find()) {
+                System.out.println("Worst seller:" + m.group());
+                return m.group();
+            }
+            return "";
     }
 
     /*
